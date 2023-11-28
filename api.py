@@ -1,49 +1,51 @@
 from flask import Flask, request, jsonify
 import random
 import multiprocessing
-from flask_pymongo import PyMongo
+import time
+import logging
 
+logging.basicConfig(level=logging.DEBUG)
 
 app = Flask(__name__)
 dados_agregados = []
 lock = multiprocessing.Lock()
+num_processos = 2
 
 def processar_dados(dado):
+    # current_process = multiprocessing.current_process()
+    # print(f"Processo atual: {current_process.name}, PID: {current_process.pid}")
+    print(dado)
     order_id = dado["ID"]
     finalPrice = dado['Price'] * 0.10
     tax = dado['Tax']
     cod_uuid = random.randint(1, 5000)
-    
-    
+
     with lock:
-        
         return {"ID": order_id, "Final Price": finalPrice, "Tax": tax, "UUID": cod_uuid}
 
 @app.route('/receber_dados', methods=['POST'])
 def receber_dados():
     try:
-        dados_json = request.jsondados_json = request.json
+        inicio = time.time()
+        dados_json = request.json
 
         # Criar um pool de processos com o número de processos desejado
-        num_processos = request.jsonnum_processos = 10
+        print("\nIniciando pool de processos...")
         pool = multiprocessing.Pool(processes=num_processos)
-
         # Dividir o JSON em partes
-        partes_json = []
-        for i in range(num_processos):
-            parte = dados_json[i::num_processos]
-            partes_json.append(parte)
-            print("Parte {}, {}".format(i, parte))
-
-        
+        partes_json = [dados_json[i::num_processos] for i in range(num_processos)]
+        print("Dividindo JSON em partes...")
         # Aplicar a função processar_dados para cada parte usando o pool
-        resultados = pool.map(processar_dados, [parte for parte_json in partes_json for parte in parte_json])
+        resultados = pool.map(processar_dados, [parte for partes_json in partes_json for parte in partes_json])
+        
         dados_agregados.append(resultados)
-        print(pool)
         # Fechar o pool
         pool.close()
         pool.join()
-        
+        fim = time.time()
+        tempo = (fim - inicio) * 1000
+        print(tempo)
+        print("Processo Conluido...\n")
         return jsonify({"mensagem": "Dados recebidos com sucesso", "Resultados": resultados})
 
     except Exception as e:
@@ -56,7 +58,7 @@ def pesquisar_dados():
 @app.route('/pesquisar_compra', methods=['GET'])
 def pesquisar_compra():
     dados_json = request.json
-    print (dados_json["UUID"])
+    print(dados_json["UUID"])
     for resultado in dados_agregados:
         for compra in resultado:
             print(compra)
@@ -64,7 +66,6 @@ def pesquisar_compra():
                 return jsonify({"Compra": compra})
 
     return jsonify({"mensagem": "Compra não encontrada"})    
-
 
 if __name__ == '__main__':
     app.run(debug=True)

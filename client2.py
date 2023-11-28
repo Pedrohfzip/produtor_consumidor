@@ -5,7 +5,7 @@ url = "http://localhost:5000/receber_dados"
 def criar_json_aleatorio():
     jsonEntrada = []
     
-    for _ in range(10):
+    for _ in range(1000):
         order_id = random.uniform(10,100)
         price = round(random.uniform(10.0, 100.0), 2)
         tax = round(random.uniform(1.0, 10.0), 2)
@@ -24,7 +24,7 @@ def enviar_dados():
 
         
 def main():
-    # while True:
+    while True:
         enviar_dados()
     
 
